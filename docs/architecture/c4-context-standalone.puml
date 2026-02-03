@@ -1,0 +1,65 @@
+@startuml C4_Context_NotificationService
+' ============================================
+' VERSIONE STANDALONE - Senza include remoto
+' Usa questa se plantuml.com ha problemi con !include
+' ============================================
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+
+' Definizioni stili C4
+skinparam rectangle {
+    StereotypeFontSize 12
+    shadowing false
+}
+
+skinparam database {
+    StereotypeFontSize 12
+    shadowing false
+}
+
+' Colori C4 standard
+!define PERSON_BG_COLOR #08427B
+!define SYSTEM_BG_COLOR #1168BD
+!define EXTERNAL_BG_COLOR #999999
+
+title C4 Context Diagram - Notification Service\n
+
+' ============================================
+' ACTORS
+' ============================================
+rectangle "**Client Applications**\n\n//E-commerce, Mobile, Banking apps//\n//that need to send notifications//" as clientApps #08427B
+
+' ============================================
+' IL NOSTRO SISTEMA
+' ============================================
+rectangle "**Notification Service**\n\n//Centralized service that handles//\n//multi-channel notifications with//\n//retry, templating, and tracking//" as notificationService #1168BD
+
+' ============================================
+' SISTEMI ESTERNI
+' ============================================
+rectangle "**SendGrid**\n//Email delivery//" as sendgrid #999999
+rectangle "**Twilio**\n//SMS delivery//" as twilio #999999
+rectangle "**Firebase FCM**\n//Push notifications//" as firebase #999999
+rectangle "**External Webhooks**\n//Callback receivers//" as webhooks #999999
+
+' ============================================
+' RELAZIONI
+' ============================================
+clientApps -down-> notificationService : "Sends notification\nrequests [REST/HTTPS]"
+notificationService -down-> sendgrid : "Sends emails\n[HTTPS/API]"
+notificationService -down-> twilio : "Sends SMS\n[HTTPS/API]"
+notificationService -down-> firebase : "Sends push\n[HTTPS/API]"
+notificationService -down-> webhooks : "Sends callbacks\n[HTTPS]"
+
+' ============================================
+' LEGENDA
+' ============================================
+legend right
+  |= Color |= Type |
+  | <#08427B> | Person / Client |
+  | <#1168BD> | Our System |
+  | <#999999> | External System |
+endlegend
+
+@enduml

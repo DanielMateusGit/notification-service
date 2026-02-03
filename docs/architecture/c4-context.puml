@@ -1,0 +1,34 @@
+@startuml C4_Context_NotificationService
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title C4 Context Diagram - Notification Service
+
+' ============================================
+' ACTORS - Chi usa il sistema
+' ============================================
+Person(clientApps, "Client Applications", "E-commerce, Mobile, Banking apps that need to send notifications to users")
+
+' ============================================
+' IL NOSTRO SISTEMA - Al centro del diagramma
+' ============================================
+System(notificationService, "Notification Service", "Centralized service that handles multi-channel notifications with retry, templating, and delivery tracking")
+
+' ============================================
+' SISTEMI ESTERNI - Provider di notifiche
+' ============================================
+System_Ext(sendgrid, "SendGrid", "Email delivery service")
+System_Ext(twilio, "Twilio", "SMS delivery service")
+System_Ext(firebase, "Firebase Cloud Messaging", "Push notification service")
+System_Ext(webhooks, "External Webhooks", "Third-party systems receiving callbacks")
+
+' ============================================
+' RELAZIONI - Chi parla con chi
+' ============================================
+Rel(clientApps, notificationService, "Sends notification requests", "REST/HTTPS")
+Rel(notificationService, sendgrid, "Sends emails", "HTTPS/API")
+Rel(notificationService, twilio, "Sends SMS", "HTTPS/API")
+Rel(notificationService, firebase, "Sends push notifications", "HTTPS/API")
+Rel(notificationService, webhooks, "Sends callbacks", "HTTPS")
+
+LAYOUT_WITH_LEGEND()
+@enduml
