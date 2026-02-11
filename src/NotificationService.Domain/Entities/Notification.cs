@@ -1,4 +1,5 @@
 using NotificationService.Domain.Enums;
+using NotificationService.Domain.Events;
 
 namespace NotificationService.Domain.Entities;
 
@@ -6,7 +7,7 @@ namespace NotificationService.Domain.Entities;
 /// Entity: Notifica
 /// Rappresenta una notifica da inviare attraverso un canale specifico
 /// </summary>
-public class Notification
+public class Notification : Entity
 {
     // ===== PROPERTIES (State) =====
 
@@ -127,6 +128,13 @@ public class Notification
             throw new ArgumentException("Scheduled time must be in the future", nameof(scheduledAt));
 
         ScheduledAt = scheduledAt;
+
+        AddDomainEvent(new NotificationScheduledEvent(
+            NotificationId: Id,
+            Recipient: Recipient,
+            Channel: Channel,
+            ScheduledAt: scheduledAt
+        ));
     }
 
     /// <summary>
@@ -137,11 +145,17 @@ public class Notification
     public void Send()
     {
         if (Status != NotificationStatus.Pending)
-            throw new InvalidOperationException(
-                $"Cannot send notification in status {Status}. Must be Pending.");
+            throw new InvalidOperationException($"Cannot send notification in status {Status}. Must be Pending.");
 
         Status = NotificationStatus.Sent;
         SentAt = DateTime.UtcNow;
+
+        AddDomainEvent(new NotificationSentEvent(
+            NotificationId: Id,
+            Recipient: Recipient,
+            Channel: Channel,
+            SentAt: SentAt.Value
+        ));
     }
 
     /// <summary>
@@ -162,6 +176,14 @@ public class Notification
         Status = NotificationStatus.Failed;
         FailedAt = DateTime.UtcNow;
         ErrorMessage = errorMessage;
+
+        AddDomainEvent(new NotificationFailedEvent(
+            NotificationId: Id,
+            Recipient: Recipient,
+            Channel: Channel,
+            ErrorMessage: errorMessage,
+            FailedAt: FailedAt.Value
+        ));
     }
 
     /// <summary>
