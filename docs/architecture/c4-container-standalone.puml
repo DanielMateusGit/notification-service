@@ -1,0 +1,94 @@
+@startuml C4_Container_NotificationService_Standalone
+' ============================================
+' STANDALONE VERSION - No external includes
+' For offline rendering or when GitHub is slow
+' ============================================
+
+skinparam backgroundColor #FFFFFF
+skinparam handwritten false
+
+' Colors
+!define PERSON_BG_COLOR #08427B
+!define CONTAINER_BG_COLOR #438DD5
+!define CONTAINER_DB_BG_COLOR #438DD5
+!define EXTERNAL_BG_COLOR #999999
+!define BOUNDARY_COLOR #444444
+
+skinparam rectangle {
+    StereotypeFontColor #FFFFFF
+    FontColor #FFFFFF
+    BorderColor #3C7FC0
+    BackgroundColor CONTAINER_BG_COLOR
+}
+
+skinparam database {
+    FontColor #FFFFFF
+    BorderColor #3C7FC0
+    BackgroundColor CONTAINER_DB_BG_COLOR
+}
+
+title C4 Container Diagram - Notification Service
+
+' ============================================
+' ACTORS
+' ============================================
+rectangle "**Client Applications**\n\n//E-commerce, Mobile, Banking apps//" as clientApps <<Person>> #08427B
+
+' ============================================
+' NOTIFICATION SERVICE BOUNDARY
+' ============================================
+package "Notification Service" as notificationService #White {
+
+    rectangle "**API**\n\n//.NET 8 Minimal API//\n\nREST endpoints for notifications,\ntemplates, delivery status" as api <<Container>> #438DD5
+
+    rectangle "**Background Worker**\n\n//.NET 8 Background Service//\n\nProcesses queue, handles retries,\nmanages delivery attempts" as worker <<Container>> #438DD5
+
+    database "**Database**\n\n//PostgreSQL 16//\n\nNotifications, templates,\ndelivery attempts, audit" as db <<Container>> #438DD5
+
+    database "**Cache**\n\n//Redis 7//\n\nTemplate cache, rate limiting,\ndistributed locking" as cache <<Container>> #438DD5
+
+    rectangle "**Job Queue**\n\n//Hangfire + PostgreSQL//\n\nScheduled jobs,\nretry policies" as queue <<Container>> #438DD5
+}
+
+' ============================================
+' EXTERNAL SYSTEMS
+' ============================================
+rectangle "**SendGrid**\n\n//Email delivery//" as sendgrid <<External>> #999999
+rectangle "**Twilio**\n\n//SMS delivery//" as twilio <<External>> #999999
+rectangle "**Firebase FCM**\n\n//Push notifications//" as firebase <<External>> #999999
+rectangle "**Webhooks**\n\n//External callbacks//" as webhooks <<External>> #999999
+
+' ============================================
+' RELATIONSHIPS
+' ============================================
+
+' Client -> API
+clientApps -down-> api : "REST/HTTPS"
+
+' API -> Internal
+api -down-> db : "Npgsql"
+api -down-> cache : "StackExchange.Redis"
+api -right-> queue : "Enqueue jobs"
+
+' Worker -> Internal
+worker -down-> db : "Update status"
+worker -down-> cache : "Locks, cache"
+worker -left-> queue : "Dequeue jobs"
+
+' Worker -> External
+worker -down-> sendgrid : "HTTPS/API"
+worker -down-> twilio : "HTTPS/API"
+worker -down-> firebase : "HTTPS/API"
+worker -down-> webhooks : "HTTPS"
+
+' ============================================
+' LEGEND
+' ============================================
+legend right
+  |= Color |= Type |
+  | <#08427B> | Person |
+  | <#438DD5> | Container |
+  | <#999999> | External System |
+endlegend
+
+@enduml

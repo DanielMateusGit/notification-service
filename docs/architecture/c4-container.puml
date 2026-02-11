@@ -1,0 +1,62 @@
+@startuml C4_Container_NotificationService
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title C4 Container Diagram - Notification Service
+
+' ============================================
+' ACTORS - Chi usa il sistema
+' ============================================
+Person(clientApps, "Client Applications", "E-commerce, Mobile, Banking apps")
+
+' ============================================
+' NOTIFICATION SERVICE BOUNDARY
+' ============================================
+System_Boundary(notificationService, "Notification Service") {
+
+    ' --- Applicazioni ---
+    Container(api, "API", ".NET 8 Minimal API", "REST endpoints for sending notifications, managing templates, querying delivery status")
+
+    Container(worker, "Background Worker", ".NET 8 Background Service", "Processes notification queue, handles retries, manages delivery attempts")
+
+    ' --- Data Stores ---
+    ContainerDb(db, "Database", "PostgreSQL 16", "Stores notifications, templates, delivery attempts, audit logs")
+
+    ContainerDb(cache, "Cache", "Redis 7", "Template caching, rate limiting, distributed locking")
+
+    ' --- Message Queue (interno, per ora in-memory/database) ---
+    Container(queue, "Job Queue", "Hangfire / PostgreSQL", "Persists scheduled jobs, manages retry policies")
+}
+
+' ============================================
+' SISTEMI ESTERNI - Provider di notifiche
+' ============================================
+System_Ext(sendgrid, "SendGrid", "Email delivery")
+System_Ext(twilio, "Twilio", "SMS delivery")
+System_Ext(firebase, "Firebase FCM", "Push notifications")
+System_Ext(webhooks, "Webhooks", "External callbacks")
+
+' ============================================
+' RELAZIONI
+' ============================================
+
+' Client -> API
+Rel(clientApps, api, "Sends requests", "REST/HTTPS")
+
+' API -> Data Stores
+Rel(api, db, "Reads/Writes", "Npgsql")
+Rel(api, cache, "Caches templates, checks rate limits", "StackExchange.Redis")
+Rel(api, queue, "Enqueues notifications", "Hangfire API")
+
+' Worker -> Data Stores
+Rel(worker, db, "Updates delivery status", "Npgsql")
+Rel(worker, cache, "Acquires locks, caches", "StackExchange.Redis")
+Rel(worker, queue, "Dequeues jobs", "Hangfire")
+
+' Worker -> External Providers
+Rel(worker, sendgrid, "Sends emails", "HTTPS/API")
+Rel(worker, twilio, "Sends SMS", "HTTPS/API")
+Rel(worker, firebase, "Sends push", "HTTPS/API")
+Rel(worker, webhooks, "Sends callbacks", "HTTPS")
+
+LAYOUT_WITH_LEGEND()
+@enduml
