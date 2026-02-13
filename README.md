@@ -31,6 +31,94 @@ This project follows **Clean Architecture** principles with 4 layers:
 
 **Architecture Decision Records:** [docs/adr/](docs/adr/)
 
+## Domain Model
+
+The domain layer contains the core business logic with **Rich Domain Model** approach (entities encapsulate behavior, not just data).
+
+### Entities
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         Notification                             │
+├─────────────────────────────────────────────────────────────────┤
+│ - Id: Guid                                                      │
+│ - Recipient: Recipient (VO)                                     │
+│ - Channel: NotificationChannel                                  │
+│ - Content: string                                               │
+│ - Status: NotificationStatus                                    │
+│ - Priority: Priority                                            │
+│ - ScheduledAt: DateTime?                                        │
+│ - SentAt: DateTime?                                             │
+├─────────────────────────────────────────────────────────────────┤
+│ + Schedule()  → raises NotificationScheduledEvent               │
+│ + Send()      → raises NotificationSentEvent                    │
+│ + Fail()      → raises NotificationFailedEvent                  │
+│ + Cancel()                                                      │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                          Template                                │
+├─────────────────────────────────────────────────────────────────┤
+│ - Id: Guid                                                      │
+│ - Name: string                                                  │
+│ - Channel: NotificationChannel                                  │
+│ - Subject: string?                                              │
+│ - Body: string                                                  │
+│ - IsActive: bool                                                │
+├─────────────────────────────────────────────────────────────────┤
+│ + Render(TemplateData) → string                                 │
+│ + Activate() / Deactivate()                                     │
+│ + UpdateContent(subject, body)                                  │
+│ + GetPlaceholders() → IEnumerable<string>                       │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                       DeliveryAttempt                            │
+├─────────────────────────────────────────────────────────────────┤
+│ - Id: Guid                                                      │
+│ - NotificationId: Guid                                          │
+│ - AttemptNumber: int                                            │
+│ - Status: DeliveryStatus                                        │
+│ - ErrorMessage: string?                                         │
+│ - AttemptedAt: DateTime                                         │
+│ - CompletedAt: DateTime?                                        │
+├─────────────────────────────────────────────────────────────────┤
+│ + MarkAsSuccess()                                               │
+│ + MarkAsFailed(errorMessage)                                    │
+│ + GetDuration() → TimeSpan?                                     │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Value Objects
+
+| Value Object | Purpose | Validation |
+|--------------|---------|------------|
+| `Recipient` | Contact info for delivery | Channel-specific validation |
+| `EmailAddress` | Valid email address | RFC 5322 format |
+| `PhoneNumber` | Valid phone number | E.164 format |
+| `TemplateData` | Key-value pairs for template rendering | Non-empty keys |
+
+### Domain Events
+
+Events are raised by entities to signal significant state changes:
+
+| Event | Triggered When |
+|-------|----------------|
+| `NotificationScheduledEvent` | Notification is scheduled for delivery |
+| `NotificationSentEvent` | Notification successfully sent |
+| `NotificationFailedEvent` | Delivery failed (after all retries) |
+
+Events are dispatched **after** `SaveChanges()` to ensure consistency.
+
+### Enums
+
+| Enum | Values |
+|------|--------|
+| `NotificationStatus` | Pending, Scheduled, Sent, Failed, Cancelled |
+| `NotificationChannel` | Email, SMS, Push, Webhook |
+| `Priority` | Low, Normal, High, Critical |
+| `DeliveryStatus` | InProgress, Success, Failed |
+
 ## Tech Stack
 
 | Component | Technology |
@@ -119,10 +207,18 @@ Content-Type: application/json
 
 | Phase | Status |
 |-------|--------|
-| Setup + Clean Architecture | In Progress |
-| Event-Driven + Channels | Planned |
-| API + DevOps | Planned |
-| Cloud + Production | Planned |
+| Setup + Clean Architecture (W1-W2) | ✅ Complete |
+| Event-Driven + Channels (W5-W8) | Planned |
+| API + DevOps (W9-W12) | Planned |
+| Cloud + Production (W13-W16) | Planned |
+
+### Week 2 Deliverables
+- ✅ Domain Model (Notification, Template, DeliveryAttempt)
+- ✅ Value Objects (Recipient, EmailAddress, PhoneNumber, TemplateData)
+- ✅ Domain Events (Scheduled, Sent, Failed)
+- ✅ 178 unit tests (all passing)
+- ✅ ADR-002: Rich Domain Model decision
+- ✅ C4 Container Diagram
 
 ## License
 
