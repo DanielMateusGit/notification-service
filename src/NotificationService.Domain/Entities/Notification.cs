@@ -201,6 +201,31 @@ public class Notification : Entity
     }
 
     /// <summary>
+    /// Ritenta l'invio di una notifica fallita
+    /// Business Rule: Può essere ritentata solo se Failed
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Se non è in stato Failed</exception>
+    public void Retry()
+    {
+        if (Status != NotificationStatus.Failed)
+            throw new InvalidOperationException(
+                $"Cannot retry notification in status {Status}. Must be Failed.");
+
+        var previousError = ErrorMessage;
+
+        Status = NotificationStatus.Pending;
+        ErrorMessage = null;
+        FailedAt = null;
+
+        AddDomainEvent(new NotificationRetriedEvent(
+            NotificationId: Id,
+            Recipient: Recipient,
+            Channel: Channel,
+            PreviousError: previousError
+        ));
+    }
+
+    /// <summary>
     /// Verifica se la notifica può essere ritentata
     /// Business Rule: Max retry dipende dalla Priority
     /// - Low: 2 retry

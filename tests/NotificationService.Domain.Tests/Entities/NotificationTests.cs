@@ -339,4 +339,97 @@ public class NotificationTests
         // Assert
         Assert.False(isReady);
     }
+
+    // ===== RETRY TESTS =====
+
+    [Fact]
+    public void Retry_WhenFailed_ChangeStatusToPending()
+    {
+        // Arrange
+        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        notification.Fail("Connection timeout");
+
+        // Act
+        notification.Retry();
+
+        // Assert
+        Assert.Equal(NotificationStatus.Pending, notification.Status);
+    }
+
+    [Fact]
+    public void Retry_WhenFailed_ClearsErrorMessage()
+    {
+        // Arrange
+        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        notification.Fail("Connection timeout");
+
+        // Act
+        notification.Retry();
+
+        // Assert
+        Assert.Null(notification.ErrorMessage);
+    }
+
+    [Fact]
+    public void Retry_WhenFailed_ClearsFailedAt()
+    {
+        // Arrange
+        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        notification.Fail("Connection timeout");
+
+        // Act
+        notification.Retry();
+
+        // Assert
+        Assert.Null(notification.FailedAt);
+    }
+
+    [Fact]
+    public void Retry_WhenFailed_RaisesNotificationRetriedEvent()
+    {
+        // Arrange
+        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        notification.Fail("Connection timeout");
+        notification.ClearDomainEvents(); // Clear the FailedEvent
+
+        // Act
+        notification.Retry();
+
+        // Assert
+        var events = notification.DomainEvents;
+        Assert.Single(events);
+        Assert.IsType<NotificationService.Domain.Events.NotificationRetriedEvent>(events.First());
+    }
+
+    [Fact]
+    public void Retry_WhenPending_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+
+        // Act & Assert
+        Assert.Throws<InvalidOperationException>(() => notification.Retry());
+    }
+
+    [Fact]
+    public void Retry_WhenSent_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        notification.Send();
+
+        // Act & Assert
+        Assert.Throws<InvalidOperationException>(() => notification.Retry());
+    }
+
+    [Fact]
+    public void Retry_WhenCancelled_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        notification.Cancel();
+
+        // Act & Assert
+        Assert.Throws<InvalidOperationException>(() => notification.Retry());
+    }
 }
