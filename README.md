@@ -110,6 +110,64 @@ Events are raised by entities to signal significant state changes:
 
 Events are dispatched **after** `SaveChanges()` to ensure consistency.
 
+## Application Layer
+
+The Application Layer implements **CQRS pattern** with **MediatR** for request/response handling.
+
+### Commands (Write Operations)
+
+| Command | Purpose | Returns |
+|---------|---------|---------|
+| `ScheduleNotificationCommand` | Create and schedule a notification | `Guid` (new ID) |
+| `CancelNotificationCommand` | Cancel a pending notification | `bool` |
+| `RetryNotificationCommand` | Retry a failed notification | `bool` |
+
+### Queries (Read Operations)
+
+| Query | Purpose | Returns |
+|-------|---------|---------|
+| `GetNotificationByIdQuery` | Get single notification | `NotificationDto?` |
+| `GetNotificationsByStatusQuery` | Get by status | `IReadOnlyList<NotificationDto>` |
+| `GetPendingNotificationsQuery` | Get ready-to-send | `IReadOnlyList<NotificationDto>` |
+
+### Pipeline Behaviors
+
+MediatR pipeline processes requests in order:
+
+```
+Request → ValidationBehavior → LoggingBehavior → Handler → Response
+              ↓ (if fails)
+         ValidationException
+```
+
+| Behavior | Purpose |
+|----------|---------|
+| `ValidationBehavior` | Runs FluentValidation before handler |
+| `LoggingBehavior` | Logs request/response for debugging |
+
+### Validation (FluentValidation)
+
+Input validation happens in the Application Layer, separate from domain rules:
+
+```csharp
+// Application Layer - Input validation (400 Bad Request)
+RuleFor(x => x.Recipient).NotEmpty();
+RuleFor(x => x.Recipient).EmailAddress().When(x => x.Channel == Email);
+
+// Domain Layer - Business rules (handled in Entity)
+if (Status != NotificationStatus.Pending)
+    throw new InvalidOperationException("Cannot cancel...");
+```
+
+### Ports (Interfaces)
+
+| Interface | Purpose |
+|-----------|---------|
+| `INotificationRepository` | Notification persistence |
+| `ITemplateRepository` | Template persistence |
+| `IUnitOfWork` | Transaction management |
+| `IDateTimeProvider` | Testable time abstraction |
+
 ### Enums
 
 | Enum | Values |
@@ -147,32 +205,79 @@ Events are dispatched **after** `SaveChanges()` to ensure consistency.
    cd notification-service
    ```
 
-2. **Start infrastructure** (PostgreSQL + Redis)
+2. **Start PostgreSQL** (Docker)
    ```bash
-   docker-compose up -d
+   docker run -d \
+     --name notification-postgres \
+     -e POSTGRES_USER=notification \
+     -e POSTGRES_PASSWORD=notification_dev \
+     -e POSTGRES_DB=notification_service \
+     -p 5432:5432 \
+     postgres:16-alpine
    ```
 
-3. **Verify containers are running**
+3. **Apply database migrations**
    ```bash
-   docker ps
+   dotnet ef database update \
+     --project src/NotificationService.Infrastructure \
+     --startup-project src/NotificationService.Api
    ```
-   You should see `notification-postgres` and `notification-redis` running.
 
-4. **Run the API** (coming soon)
+4. **Run the API**
    ```bash
    cd src/NotificationService.Api
    dotnet run
    ```
 
+### Database Setup (Manual)
+
+If you prefer to manage PostgreSQL manually:
+
+1. **Install PostgreSQL 16** (or use Docker as above)
+
+2. **Create database and user**
+   ```sql
+   CREATE USER notification WITH PASSWORD 'notification_dev';
+   CREATE DATABASE notification_service OWNER notification;
+   GRANT ALL PRIVILEGES ON DATABASE notification_service TO notification;
+   ```
+
+3. **Connection string** (already configured in `appsettings.Development.json`)
+   ```
+   Host=localhost;Port=5432;Database=notification_service;Username=notification;Password=notification_dev
+   ```
+
+4. **Apply migrations**
+   ```bash
+   dotnet ef database update \
+     --project src/NotificationService.Infrastructure \
+     --startup-project src/NotificationService.Api
+   ```
+
+### Database Schema
+
+After migrations, you'll have these tables:
+
+| Table | Description |
+|-------|-------------|
+| `notifications` | Notification records with Recipient (Owned Type) |
+| `templates` | Message templates with Scriban syntax |
+| `delivery_attempts` | Delivery history for each notification |
+| `__EFMigrationsHistory` | EF Core migration tracking |
+
 ### Configuration
 
-Copy `.env.example` to `.env` and configure:
+Connection string is in `src/NotificationService.Api/appsettings.Development.json`:
 
-```bash
-cp .env.example .env
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=notification_service;Username=notification;Password=notification_dev"
+  }
+}
 ```
 
-See [.env.example](.env.example) for all available options.
+For production, use environment variables or a secrets manager.
 
 ## Testing
 
@@ -186,7 +291,7 @@ dotnet test --collect:"XPlat Code Coverage"
 
 ## API Reference
 
-*Coming in Week 3*
+*Coming in Week 4 (Infrastructure Layer)*
 
 ```http
 POST /api/notifications
@@ -208,15 +313,33 @@ Content-Type: application/json
 | Phase | Status |
 |-------|--------|
 | Setup + Clean Architecture (W1-W2) | ✅ Complete |
-| Event-Driven + Channels (W5-W8) | Planned |
+| Application Layer (W3) | ✅ Complete |
+| Infrastructure Layer (W4) | ✅ Complete |
+| Event-Driven + Channels (W5-W8) | 🟢 Up Next |
 | API + DevOps (W9-W12) | Planned |
 | Cloud + Production (W13-W16) | Planned |
+
+### Week 4 Deliverables
+- ✅ EF Core with PostgreSQL (Npgsql)
+- ✅ Entity Configurations (Fluent API)
+- ✅ Recipient Value Object with Owned Types
+- ✅ Repository implementations (PostgresNotificationRepository, PostgresTemplateRepository)
+- ✅ UnitOfWork pattern
+- ✅ Database migrations (InitialCreate, UseRecipientValueObject)
+- ✅ Integration tests with Testcontainers (11 tests)
+- ✅ ADR-003: Database Strategy
+- ✅ 268 tests total (185 Domain + 72 Application + 11 Infrastructure)
+
+### Week 3 Deliverables
+- ✅ CQRS with MediatR (Commands + Queries)
+- ✅ FluentValidation with ValidationBehavior
+- ✅ Pipeline Behaviors (Validation + Logging)
+- ✅ Repository interfaces (INotificationRepository, ITemplateRepository)
 
 ### Week 2 Deliverables
 - ✅ Domain Model (Notification, Template, DeliveryAttempt)
 - ✅ Value Objects (Recipient, EmailAddress, PhoneNumber, TemplateData)
 - ✅ Domain Events (Scheduled, Sent, Failed)
-- ✅ 178 unit tests (all passing)
 - ✅ ADR-002: Rich Domain Model decision
 - ✅ C4 Container Diagram
 
