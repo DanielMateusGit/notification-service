@@ -1,6 +1,7 @@
 using MediatR;
 using NotificationService.Application.Interfaces;
 using NotificationService.Domain.Entities;
+using NotificationService.Domain.ValueObjects;
 
 namespace NotificationService.Application.Commands.Notifications;
 
@@ -23,23 +24,25 @@ public class ScheduleNotificationHandler : IRequestHandler<ScheduleNotificationC
 
     public async Task<Guid> Handle(ScheduleNotificationCommand command, CancellationToken cancellationToken)
     {
-        // 1. Crea l'entity usando il Domain (validazione nel costruttore)
+        // 1. Crea il Recipient Value Object (validazione nel factory method)
+        var recipient = Recipient.Create(command.Recipient, command.Channel);
+
+        // 2. Crea l'entity usando il Domain (validazione nel costruttore)
         var notification = new Notification(
-            recipient: command.Recipient,
-            channel: command.Channel,
+            recipient: recipient,
             content: command.Content,
             priority: command.Priority,
             subject: command.Subject
         );
 
-        // 2. Schedula (logica di business nel Domain, solleva evento)
+        // 3. Schedula (logica di business nel Domain, solleva evento)
         notification.Schedule(command.ScheduledAt);
 
-        // 3. Persisti
+        // 4. Persisti
         await _repository.AddAsync(notification, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // 4. Ritorna l'ID creato
+        // 5. Ritorna l'ID creato
         return notification.Id;
     }
 }

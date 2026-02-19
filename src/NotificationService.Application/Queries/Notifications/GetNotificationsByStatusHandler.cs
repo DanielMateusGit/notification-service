@@ -26,8 +26,8 @@ public class GetNotificationsByStatusHandler : IRequestHandler<GetNotificationsB
         // Mappa Entity → DTO
         return notifications.Select(n => new NotificationDto(
             Id: n.Id,
-            Recipient: n.Recipient,
-            Channel: n.Channel.ToString(),
+            Recipient: n.Recipient.Value,
+            Channel: n.Recipient.Channel.ToString(),
             Content: n.Content,
             Subject: n.Subject,
             Status: n.Status.ToString(),

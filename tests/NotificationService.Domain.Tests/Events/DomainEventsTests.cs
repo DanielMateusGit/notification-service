@@ -1,6 +1,7 @@
 using NotificationService.Domain.Entities;
 using NotificationService.Domain.Enums;
 using NotificationService.Domain.Events;
+using NotificationService.Domain.ValueObjects;
 
 namespace NotificationService.Domain.Tests.Events;
 
@@ -50,7 +51,6 @@ public class DomainEventsTests
         var @event = Assert.IsType<NotificationScheduledEvent>(notification.DomainEvents[0]);
         Assert.Equal(notification.Id, @event.NotificationId);
         Assert.Equal(notification.Recipient, @event.Recipient);
-        Assert.Equal(notification.Channel, @event.Channel);
         Assert.Equal(scheduledAt, @event.ScheduledAt);
     }
 
@@ -86,7 +86,6 @@ public class DomainEventsTests
         var @event = Assert.IsType<NotificationSentEvent>(notification.DomainEvents[0]);
         Assert.Equal(notification.Id, @event.NotificationId);
         Assert.Equal(notification.Recipient, @event.Recipient);
-        Assert.Equal(notification.Channel, @event.Channel);
         Assert.Equal(notification.SentAt, @event.SentAt);
     }
 
@@ -137,7 +136,6 @@ public class DomainEventsTests
         var @event = Assert.IsType<NotificationFailedEvent>(notification.DomainEvents[0]);
         Assert.Equal(notification.Id, @event.NotificationId);
         Assert.Equal(notification.Recipient, @event.Recipient);
-        Assert.Equal(notification.Channel, @event.Channel);
         Assert.Equal(errorMessage, @event.ErrorMessage);
         Assert.Equal(notification.FailedAt, @event.FailedAt);
     }
@@ -231,9 +229,17 @@ public class DomainEventsTests
         NotificationChannel channel = NotificationChannel.Email,
         Priority priority = Priority.Normal)
     {
+        var recipient = channel switch
+        {
+            NotificationChannel.Email => Recipient.ForEmail("test@example.com"),
+            NotificationChannel.Sms => Recipient.ForSms("+1234567890"),
+            NotificationChannel.Push => Recipient.ForPush("user123"),
+            NotificationChannel.Webhook => Recipient.ForWebhook("https://webhook.example.com/notify"),
+            _ => Recipient.ForEmail("test@example.com")
+        };
+
         return new Notification(
-            recipient: "test@example.com",
-            channel: channel,
+            recipient: recipient,
             content: "Test content",
             priority: priority,
             subject: channel == NotificationChannel.Email ? "Test Subject" : null

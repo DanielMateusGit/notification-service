@@ -57,8 +57,8 @@ public class ScheduleNotificationHandlerTests
         // Assert
         await _repository.Received(1).AddAsync(
             Arg.Is<Notification>(n =>
-                n.Recipient == command.Recipient &&
-                n.Channel == command.Channel &&
+                n.Recipient.Value == command.Recipient &&
+                n.Recipient.Channel == command.Channel &&
                 n.Content == command.Content &&
                 n.Subject == command.Subject),
             Arg.Any<CancellationToken>());
@@ -173,6 +173,6 @@ public class ScheduleNotificationHandlerTests
 
         // Assert
         Assert.NotNull(capturedNotification);
-        Assert.Equal(channel, capturedNotification!.Channel);
+        Assert.Equal(channel, capturedNotification!.Recipient.Channel);
     }
 }

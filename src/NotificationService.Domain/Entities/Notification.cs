@@ -1,5 +1,6 @@
 using NotificationService.Domain.Enums;
 using NotificationService.Domain.Events;
+using NotificationService.Domain.ValueObjects;
 
 namespace NotificationService.Domain.Entities;
 
@@ -17,14 +18,9 @@ public class Notification : Entity
     public Guid Id { get; private set; }
 
     /// <summary>
-    /// Destinatario della notifica (email, phone, userId, webhook URL)
+    /// Destinatario della notifica (Value Object con validazione)
     /// </summary>
-    public string Recipient { get; private set; }
-
-    /// <summary>
-    /// Canale di invio
-    /// </summary>
-    public NotificationChannel Channel { get; private set; }
+    public Recipient Recipient { get; private set; }
 
     /// <summary>
     /// Contenuto della notifica
@@ -73,36 +69,44 @@ public class Notification : Entity
 
     // ===== CONSTRUCTOR =====
 
+    // ===== CONSTRUCTORS =====
+
+    /// <summary>
+    /// Costruttore privato per EF Core (materializzazione da database)
+    /// </summary>
+    private Notification()
+    {
+        Recipient = null!; // EF Core imposterà il valore via Owned Type
+        Content = string.Empty;
+    }
+
     /// <summary>
     /// Crea una nuova notifica
     /// </summary>
-    /// <param name="recipient">Destinatario (email, phone, userId, URL)</param>
-    /// <param name="channel">Canale di invio</param>
+    /// <param name="recipient">Destinatario (Value Object)</param>
     /// <param name="content">Contenuto del messaggio</param>
     /// <param name="priority">Priorità (default: Normal)</param>
     /// <param name="subject">Subject (opzionale, solo per Email)</param>
     /// <exception cref="ArgumentException">Se i parametri non sono validi</exception>
+    /// <exception cref="ArgumentNullException">Se recipient è null</exception>
     public Notification(
-        string recipient,
-        NotificationChannel channel,
+        Recipient recipient,
         string content,
         Priority priority = Priority.Normal,
         string? subject = null)
     {
         // VALIDAZIONI (Business Rule: dati sempre validi)
-        if (string.IsNullOrWhiteSpace(recipient))
-            throw new ArgumentException("Recipient cannot be empty", nameof(recipient));
+        ArgumentNullException.ThrowIfNull(recipient);
 
         if (string.IsNullOrWhiteSpace(content))
             throw new ArgumentException("Content cannot be empty", nameof(content));
 
-        if (channel == NotificationChannel.Email && string.IsNullOrWhiteSpace(subject))
+        if (recipient.Channel == NotificationChannel.Email && string.IsNullOrWhiteSpace(subject))
             throw new ArgumentException("Subject is required for Email notifications", nameof(subject));
 
         // INIZIALIZZAZIONE
         Id = Guid.NewGuid();
         Recipient = recipient;
-        Channel = channel;
         Content = content;
         Subject = subject;
         Priority = priority;
@@ -132,7 +136,6 @@ public class Notification : Entity
         AddDomainEvent(new NotificationScheduledEvent(
             NotificationId: Id,
             Recipient: Recipient,
-            Channel: Channel,
             ScheduledAt: scheduledAt
         ));
     }
@@ -153,7 +156,6 @@ public class Notification : Entity
         AddDomainEvent(new NotificationSentEvent(
             NotificationId: Id,
             Recipient: Recipient,
-            Channel: Channel,
             SentAt: SentAt.Value
         ));
     }
@@ -180,7 +182,6 @@ public class Notification : Entity
         AddDomainEvent(new NotificationFailedEvent(
             NotificationId: Id,
             Recipient: Recipient,
-            Channel: Channel,
             ErrorMessage: errorMessage,
             FailedAt: FailedAt.Value
         ));
@@ -220,7 +221,6 @@ public class Notification : Entity
         AddDomainEvent(new NotificationRetriedEvent(
             NotificationId: Id,
             Recipient: Recipient,
-            Channel: Channel,
             PreviousError: previousError
         ));
     }

@@ -1,5 +1,6 @@
 using NotificationService.Domain.Entities;
 using NotificationService.Domain.Enums;
+using NotificationService.Domain.ValueObjects;
 
 namespace NotificationService.Domain.Tests.Entities;
 
@@ -11,18 +12,17 @@ public class NotificationTests
     public void Constructor_WithValidData_CreatesNotification()
     {
         // Arrange
-        var recipient = "user@example.com";
-        var channel = NotificationChannel.Email;
+        var recipient = Recipient.ForEmail("user@example.com");
         var content = "Test message";
         var subject = "Test subject";
 
         // Act
-        var notification = new Notification(recipient, channel, content, Priority.Normal, subject);
+        var notification = new Notification(recipient, content, Priority.Normal, subject);
 
         // Assert
         Assert.NotEqual(Guid.Empty, notification.Id);
         Assert.Equal(recipient, notification.Recipient);
-        Assert.Equal(channel, notification.Channel);
+        Assert.Equal(NotificationChannel.Email, notification.Recipient.Channel);
         Assert.Equal(content, notification.Content);
         Assert.Equal(subject, notification.Subject);
         Assert.Equal(Priority.Normal, notification.Priority);
@@ -33,21 +33,22 @@ public class NotificationTests
     }
 
     [Fact]
-    public void Constructor_WithEmptyRecipient_ThrowsArgumentException()
+    public void Constructor_WithNullRecipient_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
-            new Notification("", NotificationChannel.Email, "Content", Priority.Normal, "Subject"));
-
-        Assert.Equal("recipient", exception.ParamName);
+        Assert.Throws<ArgumentNullException>(() =>
+            new Notification(null!, "Content", Priority.Normal, "Subject"));
     }
 
     [Fact]
     public void Constructor_WithEmptyContent_ThrowsArgumentException()
     {
+        // Arrange
+        var recipient = Recipient.ForEmail("user@example.com");
+
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() =>
-            new Notification("user@example.com", NotificationChannel.Email, "", Priority.Normal, "Subject"));
+            new Notification(recipient, "", Priority.Normal, "Subject"));
 
         Assert.Equal("content", exception.ParamName);
     }
@@ -55,9 +56,12 @@ public class NotificationTests
     [Fact]
     public void Constructor_EmailWithoutSubject_ThrowsArgumentException()
     {
+        // Arrange
+        var recipient = Recipient.ForEmail("user@example.com");
+
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() =>
-            new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, null));
+            new Notification(recipient, "Content", Priority.Normal, null));
 
         Assert.Equal("subject", exception.ParamName);
     }
@@ -65,11 +69,14 @@ public class NotificationTests
     [Fact]
     public void Constructor_SmsWithoutSubject_DoesNotThrow()
     {
+        // Arrange
+        var recipient = Recipient.ForSms("+1234567890");
+
         // Act
-        var notification = new Notification("+1234567890", NotificationChannel.Sms, "Content");
+        var notification = new Notification(recipient, "Content");
 
         // Assert
-        Assert.Equal(NotificationChannel.Sms, notification.Channel);
+        Assert.Equal(NotificationChannel.Sms, notification.Recipient.Channel);
         Assert.Null(notification.Subject);
     }
 
@@ -79,7 +86,8 @@ public class NotificationTests
     public void Send_WhenPending_ChangeStatusToSent()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
 
         // Act
         notification.Send();
@@ -94,7 +102,8 @@ public class NotificationTests
     public void Send_WhenAlreadySent_ThrowsInvalidOperationException()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
         notification.Send();
 
         // Act & Assert
@@ -106,7 +115,8 @@ public class NotificationTests
     public void Send_WhenFailed_ThrowsInvalidOperationException()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
         notification.Fail("Test error");
 
         // Act & Assert
@@ -117,7 +127,8 @@ public class NotificationTests
     public void Send_WhenCancelled_ThrowsInvalidOperationException()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
         notification.Cancel();
 
         // Act & Assert
@@ -130,7 +141,8 @@ public class NotificationTests
     public void Fail_WhenPending_ChangeStatusToFailed()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
         var errorMessage = "SMTP server unavailable";
 
         // Act
@@ -147,7 +159,8 @@ public class NotificationTests
     public void Fail_WithEmptyErrorMessage_ThrowsArgumentException()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
 
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => notification.Fail(""));
@@ -158,7 +171,8 @@ public class NotificationTests
     public void Fail_WhenAlreadySent_ThrowsInvalidOperationException()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
         notification.Send();
 
         // Act & Assert
@@ -171,7 +185,8 @@ public class NotificationTests
     public void Cancel_WhenPending_ChangeStatusToCancelled()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
 
         // Act
         notification.Cancel();
@@ -184,7 +199,8 @@ public class NotificationTests
     public void Cancel_WhenAlreadySent_ThrowsInvalidOperationException()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
         notification.Send();
 
         // Act & Assert
@@ -197,7 +213,8 @@ public class NotificationTests
     public void Schedule_WithFutureDate_SetsScheduledAt()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
         var scheduledAt = DateTime.UtcNow.AddHours(2);
 
         // Act
@@ -211,7 +228,8 @@ public class NotificationTests
     public void Schedule_WithPastDate_ThrowsArgumentException()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
         var pastDate = DateTime.UtcNow.AddHours(-1);
 
         // Act & Assert
@@ -223,7 +241,8 @@ public class NotificationTests
     public void Schedule_WhenNotPending_ThrowsInvalidOperationException()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
         notification.Send();
         var futureDate = DateTime.UtcNow.AddHours(2);
 
@@ -245,7 +264,8 @@ public class NotificationTests
     public void CanRetry_ReturnsCorrectValueBasedOnPriority(Priority priority, int attemptNumber, bool expected)
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", priority, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", priority, "Subject");
 
         // Act
         var canRetry = notification.CanRetry(attemptNumber);
@@ -260,7 +280,8 @@ public class NotificationTests
     public void IsReadyToSend_WhenPendingAndNotScheduled_ReturnsTrue()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
 
         // Act
         var isReady = notification.IsReadyToSend();
@@ -273,7 +294,8 @@ public class NotificationTests
     public void IsReadyToSend_WhenPendingAndScheduledInPast_ReturnsTrue()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
         // Simula schedulazione nel passato (in realtà non possiamo con la validazione, ma testiamo la logica)
         // In un caso reale, questo sarebbe schedulato in futuro e poi il tempo passerebbe
 
@@ -288,7 +310,8 @@ public class NotificationTests
     public void IsReadyToSend_WhenPendingAndScheduledInFuture_ReturnsFalse()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
         notification.Schedule(DateTime.UtcNow.AddHours(2));
 
         // Act
@@ -302,7 +325,8 @@ public class NotificationTests
     public void IsReadyToSend_WhenSent_ReturnsFalse()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
         notification.Send();
 
         // Act
@@ -316,7 +340,8 @@ public class NotificationTests
     public void IsReadyToSend_WhenFailed_ReturnsFalse()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
         notification.Fail("Error");
 
         // Act
@@ -330,7 +355,8 @@ public class NotificationTests
     public void IsReadyToSend_WhenCancelled_ReturnsFalse()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
         notification.Cancel();
 
         // Act
@@ -346,7 +372,8 @@ public class NotificationTests
     public void Retry_WhenFailed_ChangeStatusToPending()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
         notification.Fail("Connection timeout");
 
         // Act
@@ -360,7 +387,8 @@ public class NotificationTests
     public void Retry_WhenFailed_ClearsErrorMessage()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
         notification.Fail("Connection timeout");
 
         // Act
@@ -374,7 +402,8 @@ public class NotificationTests
     public void Retry_WhenFailed_ClearsFailedAt()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
         notification.Fail("Connection timeout");
 
         // Act
@@ -388,7 +417,8 @@ public class NotificationTests
     public void Retry_WhenFailed_RaisesNotificationRetriedEvent()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
         notification.Fail("Connection timeout");
         notification.ClearDomainEvents(); // Clear the FailedEvent
 
@@ -405,7 +435,8 @@ public class NotificationTests
     public void Retry_WhenPending_ThrowsInvalidOperationException()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
 
         // Act & Assert
         Assert.Throws<InvalidOperationException>(() => notification.Retry());
@@ -415,7 +446,8 @@ public class NotificationTests
     public void Retry_WhenSent_ThrowsInvalidOperationException()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
         notification.Send();
 
         // Act & Assert
@@ -426,7 +458,8 @@ public class NotificationTests
     public void Retry_WhenCancelled_ThrowsInvalidOperationException()
     {
         // Arrange
-        var notification = new Notification("user@example.com", NotificationChannel.Email, "Content", Priority.Normal, "Subject");
+        var recipient = Recipient.ForEmail("user@example.com");
+        var notification = new Notification(recipient, "Content", Priority.Normal, "Subject");
         notification.Cancel();
 
         // Act & Assert

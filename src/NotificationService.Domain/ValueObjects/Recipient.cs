@@ -28,7 +28,16 @@ public class Recipient : IEquatable<Recipient>
     /// </summary>
     public PhoneNumber? Phone { get; }
 
-    // ===== PRIVATE CONSTRUCTOR =====
+    // ===== PRIVATE CONSTRUCTORS =====
+
+    /// <summary>
+    /// Costruttore privato per EF Core (materializzazione da database)
+    /// </summary>
+    private Recipient()
+    {
+        Value = string.Empty;
+        Channel = NotificationChannel.Email;
+    }
 
     private Recipient(string value, NotificationChannel channel, EmailAddress? email = null, PhoneNumber? phone = null)
     {

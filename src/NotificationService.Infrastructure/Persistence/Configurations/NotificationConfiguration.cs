@@ -24,16 +24,24 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
             .HasColumnName("id")
             .ValueGeneratedNever(); // L'ID è generato dal Domain
 
-        builder.Property(n => n.Recipient)
-            .HasColumnName("recipient")
-            .HasMaxLength(500)
-            .IsRequired();
+        // Owned Type per Recipient Value Object
+        builder.OwnsOne(n => n.Recipient, recipient =>
+        {
+            recipient.Property(r => r.Value)
+                .HasColumnName("recipient_value")
+                .HasMaxLength(500)
+                .IsRequired();
 
-        builder.Property(n => n.Channel)
-            .HasColumnName("channel")
-            .HasConversion<string>() // Salva come stringa nel DB
-            .HasMaxLength(50)
-            .IsRequired();
+            recipient.Property(r => r.Channel)
+                .HasColumnName("recipient_channel")
+                .HasConversion<string>()
+                .HasMaxLength(50)
+                .IsRequired();
+
+            // Ignora proprietà calcolate (non persistite)
+            recipient.Ignore(r => r.Email);
+            recipient.Ignore(r => r.Phone);
+        });
 
         builder.Property(n => n.Content)
             .HasColumnName("content")

@@ -3,6 +3,7 @@ using NotificationService.Application.Interfaces;
 using NotificationService.Application.Queries.Notifications;
 using NotificationService.Domain.Entities;
 using NotificationService.Domain.Enums;
+using NotificationService.Domain.ValueObjects;
 
 namespace NotificationService.Application.Tests.Handlers;
 
@@ -23,8 +24,8 @@ public class GetNotificationsByStatusHandlerTests
         // Arrange
         var notifications = new List<Notification>
         {
-            new("user1@example.com", NotificationChannel.Email, "Content 1", subject: "Subject 1"),
-            new("user2@example.com", NotificationChannel.Email, "Content 2", subject: "Subject 2")
+            new(Recipient.ForEmail("user1@example.com"), "Content 1", subject: "Subject 1"),
+            new(Recipient.ForEmail("user2@example.com"), "Content 2", subject: "Subject 2")
         };
 
         _repository.GetByStatusAsync(NotificationStatus.Pending, Arg.Any<CancellationToken>())
@@ -59,9 +60,9 @@ public class GetNotificationsByStatusHandlerTests
     public async Task Handle_MapsAllFieldsCorrectly()
     {
         // Arrange
+        var recipient = Recipient.ForSms("+391234567890");
         var notification = new Notification(
-            recipient: "user@example.com",
-            channel: NotificationChannel.Sms,
+            recipient: recipient,
             content: "SMS content",
             priority: Priority.Critical
         );
@@ -77,7 +78,7 @@ public class GetNotificationsByStatusHandlerTests
         // Assert
         var dto = result.Single();
         Assert.Equal(notification.Id, dto.Id);
-        Assert.Equal(notification.Recipient, dto.Recipient);
+        Assert.Equal(notification.Recipient.Value, dto.Recipient);
         Assert.Equal("Sms", dto.Channel);
         Assert.Equal(notification.Content, dto.Content);
         Assert.Equal("Pending", dto.Status);

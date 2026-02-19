@@ -27,8 +27,8 @@ public class GetNotificationByIdHandler : IRequestHandler<GetNotificationByIdQue
         // Mappa Entity → DTO (no entity fuori dall'Application Layer!)
         return new NotificationDto(
             Id: notification.Id,
-            Recipient: notification.Recipient,
-            Channel: notification.Channel.ToString(),
+            Recipient: notification.Recipient.Value,
+            Channel: notification.Recipient.Channel.ToString(),
             Content: notification.Content,
             Subject: notification.Subject,
             Status: notification.Status.ToString(),

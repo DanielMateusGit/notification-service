@@ -3,6 +3,7 @@ using NotificationService.Application.Interfaces;
 using NotificationService.Application.Queries.Notifications;
 using NotificationService.Domain.Entities;
 using NotificationService.Domain.Enums;
+using NotificationService.Domain.ValueObjects;
 
 namespace NotificationService.Application.Tests.Handlers;
 
@@ -23,8 +24,8 @@ public class GetPendingNotificationsHandlerTests
         // Arrange - notifiche non schedulate sono sempre "ready"
         var notifications = new List<Notification>
         {
-            new("user1@example.com", NotificationChannel.Email, "Content 1", subject: "Subject 1"),
-            new("user2@example.com", NotificationChannel.Email, "Content 2", subject: "Subject 2")
+            new(Recipient.ForEmail("user1@example.com"), "Content 1", subject: "Subject 1"),
+            new(Recipient.ForEmail("user2@example.com"), "Content 2", subject: "Subject 2")
         };
 
         _repository.GetPendingAsync(Arg.Any<CancellationToken>())
@@ -60,16 +61,14 @@ public class GetPendingNotificationsHandlerTests
     {
         // Arrange
         var readyNotification = new Notification(
-            "ready@example.com",
-            NotificationChannel.Email,
+            Recipient.ForEmail("ready@example.com"),
             "Ready",
             subject: "Subject"
         );
         // Non schedulata = ready to send
 
         var futureNotification = new Notification(
-            "future@example.com",
-            NotificationChannel.Email,
+            Recipient.ForEmail("future@example.com"),
             "Future",
             subject: "Subject"
         );
@@ -94,9 +93,9 @@ public class GetPendingNotificationsHandlerTests
     public async Task Handle_MapsAllFieldsCorrectly()
     {
         // Arrange
+        var recipient = Recipient.ForSms("+391234567890");
         var notification = new Notification(
-            recipient: "+391234567890",
-            channel: NotificationChannel.Sms,
+            recipient: recipient,
             content: "SMS content",
             priority: Priority.High
         );
@@ -112,7 +111,7 @@ public class GetPendingNotificationsHandlerTests
         // Assert
         var dto = result.Single();
         Assert.Equal(notification.Id, dto.Id);
-        Assert.Equal(notification.Recipient, dto.Recipient);
+        Assert.Equal(notification.Recipient.Value, dto.Recipient);
         Assert.Equal("Sms", dto.Channel);
         Assert.Equal(notification.Content, dto.Content);
         Assert.Equal("Pending", dto.Status);

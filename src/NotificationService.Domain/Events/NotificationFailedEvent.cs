@@ -1,4 +1,4 @@
-using NotificationService.Domain.Enums;
+using NotificationService.Domain.ValueObjects;
 
 namespace NotificationService.Domain.Events;
 
@@ -7,8 +7,7 @@ namespace NotificationService.Domain.Events;
 /// </summary>
 public record NotificationFailedEvent(
     Guid NotificationId,
-    string Recipient,
-    NotificationChannel Channel,
+    Recipient Recipient,
     string ErrorMessage,
     DateTime FailedAt
 ) : IDomainEvent

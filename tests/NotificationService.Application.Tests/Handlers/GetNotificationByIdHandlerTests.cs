@@ -3,6 +3,7 @@ using NotificationService.Application.Interfaces;
 using NotificationService.Application.Queries.Notifications;
 using NotificationService.Domain.Entities;
 using NotificationService.Domain.Enums;
+using NotificationService.Domain.ValueObjects;
 
 namespace NotificationService.Application.Tests.Handlers;
 
@@ -22,9 +23,9 @@ public class GetNotificationByIdHandlerTests
     {
         // Arrange
         var notificationId = Guid.NewGuid();
+        var recipient = Recipient.ForEmail("user@example.com");
         var notification = new Notification(
-            recipient: "user@example.com",
-            channel: NotificationChannel.Email,
+            recipient: recipient,
             content: "Test content",
             subject: "Subject"
         );
@@ -39,7 +40,7 @@ public class GetNotificationByIdHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(notification.Recipient, result!.Recipient);
+        Assert.Equal(notification.Recipient.Value, result!.Recipient);
         Assert.Equal(notification.Content, result.Content);
         Assert.Equal(notification.Subject, result.Subject);
     }
@@ -66,9 +67,9 @@ public class GetNotificationByIdHandlerTests
     {
         // Arrange
         var notificationId = Guid.NewGuid();
+        var recipient = Recipient.ForEmail("user@example.com");
         var notification = new Notification(
-            recipient: "user@example.com",
-            channel: NotificationChannel.Email,
+            recipient: recipient,
             content: "Test content",
             priority: Priority.High,
             subject: "Test Subject"
@@ -86,7 +87,7 @@ public class GetNotificationByIdHandlerTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal(notification.Id, result!.Id);
-        Assert.Equal(notification.Recipient, result.Recipient);
+        Assert.Equal(notification.Recipient.Value, result.Recipient);
         Assert.Equal("Email", result.Channel);
         Assert.Equal(notification.Content, result.Content);
         Assert.Equal(notification.Subject, result.Subject);

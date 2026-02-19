@@ -3,6 +3,7 @@ using NotificationService.Application.Commands.Notifications;
 using NotificationService.Application.Interfaces;
 using NotificationService.Domain.Entities;
 using NotificationService.Domain.Enums;
+using NotificationService.Domain.ValueObjects;
 
 namespace NotificationService.Application.Tests.Handlers;
 
@@ -24,9 +25,9 @@ public class CancelNotificationHandlerTests
     {
         // Arrange
         var notificationId = Guid.NewGuid();
+        var recipient = Recipient.ForEmail("user@example.com");
         var notification = new Notification(
-            recipient: "user@example.com",
-            channel: NotificationChannel.Email,
+            recipient: recipient,
             content: "Test",
             subject: "Subject"
         );
@@ -101,9 +102,9 @@ public class CancelNotificationHandlerTests
     {
         // Arrange
         var notificationId = Guid.NewGuid();
+        var recipient = Recipient.ForEmail("user@example.com");
         var notification = new Notification(
-            recipient: "user@example.com",
-            channel: NotificationChannel.Email,
+            recipient: recipient,
             content: "Test",
             subject: "Subject"
         );
@@ -125,9 +126,9 @@ public class CancelNotificationHandlerTests
     {
         // Arrange
         var notificationId = Guid.NewGuid();
+        var recipient = Recipient.ForEmail("user@example.com");
         var notification = new Notification(
-            recipient: "user@example.com",
-            channel: NotificationChannel.Email,
+            recipient: recipient,
             content: "Test",
             subject: "Subject"
         );
@@ -149,9 +150,9 @@ public class CancelNotificationHandlerTests
     {
         // Arrange
         var notificationId = Guid.NewGuid();
+        var recipient = Recipient.ForEmail("user@example.com");
         var notification = new Notification(
-            recipient: "user@example.com",
-            channel: NotificationChannel.Email,
+            recipient: recipient,
             content: "Test",
             subject: "Subject"
         );
